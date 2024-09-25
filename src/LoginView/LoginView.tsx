@@ -31,7 +31,7 @@ export const LoginView: FC = () => {
 
     return (
       <>
-        <Image source={require('../../assets/legionkey.png')} style={styles.logo} />
+{/*        <Image source={require('../../assets/legionkey.png')} style={styles.logo} />
         <InputField
           key="email"
           placeholder="Email login"
@@ -57,15 +57,15 @@ export const LoginView: FC = () => {
         <Button
           title="Connect with Google"
           onPress={() => client.auth.social.connect({ provider: 'google' })}
-        />
+        />*/}
         <Button onPress={() => client.ui.auth.show()} title="Open Auth Flow UI" />
       </>
     )
   }
 
   return (
-    <ImageBackground 
-      source={require('../../assets/warriors-background-small.png')} 
+    <ImageBackground
+      source={require('../../assets/warriors-background-small.png')}
       style={styles.background}
     >
       <View style={styles.container}>

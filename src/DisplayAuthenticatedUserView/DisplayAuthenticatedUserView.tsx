@@ -1,90 +1,97 @@
 import { FC } from "react";
 import { View, Text, StyleSheet, Button } from "react-native";
-import { client } from "../client";
+import { client, dynamicClient } from "../client";
 import { useReactiveClient } from "@dynamic-labs/react-hooks";
+import {
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
 
+// Display authenticated user view with only the Send 1 SOL button
 export const DisplayAuthenticatedUserView: FC = () => {
   const { auth, wallets } = useReactiveClient(client);
-
+  console.log("de hook")
+  console.log(wallets.userWallets[0])
   return (
-    <View style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.section__heading}>User:</Text>
-        <View style={styles.content_section}>
-          <Text>{JSON.stringify(auth.authenticatedUser, null, 2)}</Text>
+      <View style={styles.container}>
+        <View style={styles.section}>
+          <Text style={styles.section__heading}>Actions</Text>
+          <View style={[styles.content_section, styles.actions_section]}>
+            <Button
+                onPress={() => client.ui.userProfile.show()}
+                title="User Profile UI"
+            />
+            <Button onPress={() => client.auth.logout()} title="Logout" />
+          </View>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.section__heading}>Send 1 SOL:</Text>
+          <Send1SolButton destinationAddress="" wallet={wallets.userWallets[0]} />
         </View>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.section__heading}>Actions</Text>
-        <View style={[styles.content_section, styles.actions_section]}>
-          <Button
-            onPress={() => client.ui.userProfile.show()}
-            title="User Profile UI"
-          />
-          <Button onPress={() => client.auth.logout()} title="Logout" />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.section__heading}>JWT:</Text>
-        <View style={styles.content_section}>
-          <Text>{auth.token}</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.section__heading}>Wallets:</Text>
-        <View style={styles.content_section}>
-          {wallets.userWallets.map((wallet) => (
-            <View>
-              <Text>Wallet address: {wallet.address}</Text>
-
-              <Button
-                title="Sign message"
-                onPress={async () => {
-                  const walletClient = client.viem.createWalletClient({
-                    wallet,
-                  });
-
-                  const signedMessage = await walletClient.signMessage({
-                    message: "Hello, world!",
-                  });
-
-                  console.log(signedMessage);
-                }}
-              />
-            </View>
-          ))}
-        </View>
-      </View>
-    </View>
   );
 };
 
+// Send 1 SOL button component
+interface Send1SolButtonProps {
+  destinationAddress: string;
+}
+
+/**
+ * Renders a button that sends 1 SOL to a given address.
+ */
+const Send1SolButton: FC<Send1SolButtonProps> = ({ destinationAddress, wallet }) => {
+
+  const send = async () => {
+    const connection = client.solana.getConnection();
+    const signer = client.solana.getSigner({ wallet });
+
+    const { blockhash } = await connection.getLatestBlockhash();
+
+    const amountInLamports = 0.1 * LAMPORTS_PER_SOL;
+    const fromKey = new PublicKey(wallet.address);
+    const toKey = new PublicKey(destinationAddress);
+
+    const instructions = [
+      SystemProgram.transfer({
+        fromPubkey: fromKey,
+        lamports: amountInLamports,
+        toPubkey: toKey,
+      }),
+    ];
+
+    console.log("yepx")
+    console.log(instructions)
+
+    const messageV0 = new TransactionMessage({
+      instructions,
+      payerKey: fromKey,
+      recentBlockhash: blockhash,
+    }).compileToV0Message();
+
+    const transaction = new VersionedTransaction(messageV0);
+    console.log("messageV0")
+    console.log(messageV0)
+    const { signature } = await signer.signAndSendTransaction(transaction);
+
+    console.log("Successful transaction signature:", signature);
+  };
+
+  return (
+      <View style={styles.buttonContainer}>
+        <Button title="Send 1 SOL" onPress={send} />
+      </View>
+  );
+};
+
+// Styles
 const styles = StyleSheet.create({
   container: {
     alignContent: "stretch",
-    gap: 40,
     padding: 20,
-  },
-
-  scroll: {
-    alignContent: "stretch",
-  },
-
-  heading: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: -50,
-  },
-
-  heading__text: {
-    fontSize: 20,
-  },
-
-  error: {
-    color: "red",
   },
 
   section: {
@@ -96,15 +103,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  content_section: {
-    padding: 10,
-    borderRadius: 6,
-    backgroundColor: "#f9f9f9",
-  },
-
-  actions_section: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
+  buttonContainer: {
+    marginTop: 10,
   },
 });
+
+export default DisplayAuthenticatedUserView;
